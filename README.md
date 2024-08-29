@@ -1,3 +1,4 @@
+//garbage
 // reverses the bits in a range in a given bitarray. We do this by first expanding our
 // range to the nearest block boundaries, reversing the entire range, and then shifting
 // over however much we need (the amount offset from the end boundary - the offset from the start). 
