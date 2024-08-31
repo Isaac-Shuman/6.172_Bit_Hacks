@@ -85,4 +85,6 @@ void bitarray_rotate(bitarray_t* const bitarray,
                      const size_t bit_length,
                      const ssize_t bit_right_amount);
 
+void do_isaac_stuff(void);
+
 #endif  // BITARRAY_H

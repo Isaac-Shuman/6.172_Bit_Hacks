@@ -32,6 +32,9 @@
 #include <unistd.h>
 #include "./tests.h"
 
+//added by isaac
+#include "./bitarray.h"
+
 
 // ******************************* Prototypes *******************************
 
@@ -43,6 +46,7 @@ void print_usage(const char* const argv_0);
 int main(int argc, char** argv) {
   int retval = EXIT_SUCCESS;
 
+  do_isaac_stuff();
   // Parse options.
   char optchar;
   opterr = 0;

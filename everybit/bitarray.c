@@ -33,6 +33,14 @@
 
 #include <sys/types.h>
 
+//Added by isaac
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+
+#define WORD_SIZE 64
+#define TRAIL(x) (UINT64_MAX >> (WORD_SIZE-(x)))
+#define LEAD(x) (UINT64_MAX << (WORD_SIZE-(x)))
 
 // ********************************* Types **********************************
 
@@ -47,6 +55,7 @@ struct bitarray {
   char* buf;
 };
 
+typedef uint64_t word;
 
 // ******************** Prototypes for static functions *********************
 
@@ -107,7 +116,22 @@ static size_t modulo(const ssize_t n, const size_t m);
 // not matter.
 static char bitmask(const size_t bit_index);
 
+static void bitarray_reverse_slow(bitarray_t* const bitarray,
+                                  const size_t bit_offset,
+                                  const size_t bit_length);
 
+static void bitarray_rotate_slow(bitarray_t* const bitarray,
+                                 const size_t bit_offset,
+                                 const size_t bit_length,
+                                 const size_t bit_left_amount);
+
+static word bitarray_get_word(const bitarray_t* const bitarray, const size_t bit_index);
+
+void do_isaac_stuff(void);
+
+static void print_word(word a_word);
+
+static void print_bitarray(const bitarray_t* const bitarray);
 // ******************************* Functions ********************************
 
 bitarray_t* bitarray_new(const size_t bit_sz) {
@@ -193,7 +217,11 @@ void bitarray_rotate(bitarray_t* const bitarray,
 
   // Convert a rotate left or right to a left rotate only, and eliminate
   // multiple full rotations.
-  bitarray_rotate_left(bitarray, bit_offset, bit_length,
+  // bitarray_rotate_left(bitarray, bit_offset, bit_length,
+  //                      modulo(-bit_right_amount, bit_length));
+  bitarray_rotate_slow(bitarray,
+                       bit_offset,
+                       bit_length,
                        modulo(-bit_right_amount, bit_length));
 }
 
@@ -231,3 +259,96 @@ static char bitmask(const size_t bit_index) {
   return 1 << (bit_index % 8);
 }
 
+// ******************************* Functions. Added By Isaac ***********************
+
+static void bitarray_reverse_slow(bitarray_t* const bitarray,
+                                  const size_t bit_offset,
+                                  const size_t bit_length) {
+  int lp = bit_offset;
+  int rp = bit_offset + bit_length - 1;
+  bool lbit, rbit;
+  for(int i = 0; i < bit_length/2 ; i++) {
+    lbit = bitarray_get(bitarray, lp);
+    rbit = bitarray_get(bitarray, rp);
+    bitarray_set(bitarray, lp, rbit);
+    bitarray_set(bitarray, rp, lbit);
+    lp++;
+    rp--;
+  }
+}
+
+static void bitarray_rotate_slow(bitarray_t* const bitarray,
+                                 const size_t bit_offset,
+                                 const size_t bit_length,
+                                 const size_t bit_left_amount) {
+  bitarray_reverse_slow(bitarray, bit_offset, bit_left_amount); //reverse a
+  bitarray_reverse_slow(bitarray, bit_offset + bit_left_amount, bit_length-bit_left_amount); //reverse b
+  bitarray_reverse_slow(bitarray, bit_offset, bit_length);
+}
+
+word bitarray_get_aligned_block(const bitarray_t *const bitarray, const size_t byte_index) {
+  //assert(byte_index*8 < bitarray->bit_sz); 
+  return ((word *) bitarray->buf)[byte_index];
+}
+
+static word bitarray_get_word(const bitarray_t* const bitarray, const size_t bit_index) {
+	word result;
+  //this does not work as intendend because it is stored right to left instead of left to right.
+	word lw = ((word *) bitarray->buf)[bit_index/WORD_SIZE];
+	word rw = ((word *) bitarray->buf)[bit_index/WORD_SIZE + 1]; //relies on buf contianing a 64 bit word to the right of the word containing the current bi
+  printf("lw is: ");
+  print_word(lw);
+  printf("lw is: %lX\n", lw);
+  printf("rw is: ");
+  print_word(rw);
+  printf("rw is: %lX\n", rw);
+  
+  uint_fast8_t x = WORD_SIZE - modulo(bit_index, WORD_SIZE);
+
+	//lw = ((word) (lw & TRAIL(x))) >> ((uint_fast8_t) (WORD_SIZE - x)); //the &s here are redundant?
+  lw = lw >> (WORD_SIZE - x);
+	rw = rw << x; //how shifts manipulate the underlying memory is dependent on endianess
+  //rw = ((word) (rw & LEAD(WORD_SIZE - x))) >> (x);
+
+  printf("x is: %hhi\n", x);
+  printf("lw shifted is: ");
+  print_word(lw);
+    printf("lw is: %lX\n", lw);
+  printf("rw shifted is: ");
+  print_word(rw);
+  printf("rw is: %lX\n", rw);
+	
+	result = lw | rw;
+  return result;
+} 
+static void print_bitarray(const bitarray_t* const bitarray) {
+  for (size_t bit_index = 0; bit_index < bitarray->bit_sz; bit_index++)
+    printf("%s", bitarray_get(bitarray, bit_index) ? "1" : "0");
+  printf("\n");
+}
+
+static void print_word(const word a_word) {
+  bitarray_t* word_bitarray = bitarray_new((size_t) 64);
+  memcpy(word_bitarray->buf, &a_word, sizeof(a_word));
+  print_bitarray(word_bitarray);
+  free(word_bitarray);
+}
+void do_isaac_stuff(void) {
+  struct bitarray* a_bitarray = bitarray_new((size_t) 128);
+  char values[16] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x1F, 0x2E, 0x3D, 0x4C, 0x5B, 0x6A, 0x79, 0x88};
+  memcpy(a_bitarray->buf, values, sizeof(values));
+  // for (int i = 0; i < sizeof(values); i++) {
+  //   printf("%hhX ", ( a_bit_array->buf)[i]);
+  // }
+  print_bitarray(a_bitarray);
+
+  word a_word = bitarray_get_word(a_bitarray, 63);
+  print_word(a_word);
+  
+  free(a_bitarray);
+  a_bitarray = NULL;
+  printf("The word retrieved is: %lX\n", a_word);
+  //initialize bitarray to a know value
+  //try getting a word, printf(hex)
+  //cry when it fails
+}
