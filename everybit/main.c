@@ -46,12 +46,11 @@ void print_usage(const char* const argv_0);
 int main(int argc, char** argv) {
   int retval = EXIT_SUCCESS;
 
-  do_isaac_stuff();
   // Parse options.
   char optchar;
   opterr = 0;
   int selected_test = -1;
-  while ((optchar = getopt(argc, argv, "n:t:sml")) != -1) {
+  while ((optchar = getopt(argc, argv, "n:t:smli")) != -1) {
     switch (optchar) {
     case 'n':
       selected_test = atoi(optarg);
@@ -84,6 +83,9 @@ int main(int argc, char** argv) {
              timed_rotation(1.0));
       printf("---- END RESULTS ----\n");
       retval = EXIT_SUCCESS;
+      goto cleanup;
+    case 'i':
+      do_isaac_stuff();
       goto cleanup;
     }
   }

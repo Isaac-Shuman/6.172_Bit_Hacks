@@ -312,6 +312,7 @@ int timed_rotation(const double time_limit_seconds) {
          tier_num, buf, time_limit_seconds, diff_seconds);
       // Return the last tier that was succesful.
       return tier_num - 1;
+      //tier_num++;
     }
   }
 
